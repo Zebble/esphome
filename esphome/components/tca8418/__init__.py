@@ -1,7 +1,7 @@
 from esphome import automation, pins
 import esphome.codegen as cg
 from esphome.components import i2c, key_provider
-from esphome.components.const import CONF_ROWS
+from esphome.components.const import CONF_KEYS, CONF_ROWS
 import esphome.config_validation as cv
 from esphome.const import CONF_ID, CONF_INTERRUPT_PIN, CONF_ON_KEY, CONF_TRIGGER_ID
 
@@ -13,7 +13,6 @@ MULTI_CONF = True
 CONF_COLUMNS = "columns"
 CONF_GPI_EVENTS = "gpi_events"
 CONF_KEYPAD_ID = "keypad_id"
-CONF_KEYS = "keys"
 
 tca8418_ns = cg.esphome_ns.namespace("tca8418")
 TCA8418Component = tca8418_ns.class_(
