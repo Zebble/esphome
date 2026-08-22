@@ -5,10 +5,13 @@ namespace esphome::tca8418 {
 
 static const char *const TAG = "tca8418";
 
-//  How often to ask the device whether it has events, when no interrupt pin is
-//  configured. Reading the interrupt pin is nearly free, so it is checked every
-//  loop instead.
+//  How often to ask the device whether it has events when there is no interrupt
+//  pin to tell us.
 static constexpr uint32_t POLL_INTERVAL_MS = 10;
+//  How often to ask anyway when there is an interrupt pin. The pin is the fast
+//  path, but asking occasionally means a pin that is stuck, mis-wired or slow to
+//  settle after start-up cannot leave events sitting unread.
+static constexpr uint32_t SAFETY_POLL_INTERVAL_MS = 250;
 
 void TCA8418Component::setup() {
   //  The configuration register reads back, so use it to check the device is there.
@@ -36,11 +39,12 @@ void TCA8418Component::setup() {
     this->interrupt_pin_->setup();
   }
 
-  //  Discard anything the device queued before it was configured.
+  //  Discard anything the device queued before it was configured, and clear
+  //  every interrupt flag: leaving one set holds the interrupt output asserted.
   uint8_t key;
   while (this->read_byte(TCA8418_REG_KEY_EVENT_A, &key) && key != 0) {
   }
-  this->write_byte(TCA8418_REG_INT_STAT, TCA8418_INT_STAT_KEY);
+  this->write_byte(TCA8418_REG_INT_STAT, TCA8418_INT_STAT_ALL);
 }
 
 bool TCA8418Component::configure_pins_() {
@@ -74,15 +78,17 @@ bool TCA8418Component::configure_pins_() {
 }
 
 void TCA8418Component::loop() {
-  if (this->interrupt_pin_ != nullptr) {
-    //  The interrupt output is active low, and stays asserted while events are
-    //  queued. Reading the level (rather than waiting for an edge) means a
-    //  missed edge cannot leave events stranded in the queue.
-    if (this->interrupt_pin_->digital_read())
-      return;
-  } else {
+  //  The interrupt output is active low, and stays asserted while events are
+  //  queued. Reading the level, rather than waiting for an edge, means a missed
+  //  edge cannot leave events stranded in the queue.
+  const bool interrupt_asserted = this->interrupt_pin_ != nullptr && !this->interrupt_pin_->digital_read();
+
+  if (!interrupt_asserted) {
+    //  Ask the device itself. This is the only path when there is no interrupt
+    //  pin, and a safety net when there is one.
+    const uint32_t interval = this->interrupt_pin_ != nullptr ? SAFETY_POLL_INTERVAL_MS : POLL_INTERVAL_MS;
     const uint32_t now = millis();
-    if (now - this->last_poll_ < POLL_INTERVAL_MS)
+    if (now - this->last_poll_ < interval)
       return;
     this->last_poll_ = now;
 
