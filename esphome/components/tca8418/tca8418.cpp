@@ -83,10 +83,11 @@ void TCA8418Component::loop() {
   //  edge cannot leave events stranded in the queue.
   const bool interrupt_asserted = this->interrupt_pin_ != nullptr && !this->interrupt_pin_->digital_read();
 
+  if (this->interrupt_pin_ != nullptr && !interrupt_asserted)
+    return;  // TEST BUILD: no safety poll - the pin is the only trigger
+
   if (!interrupt_asserted) {
-    //  Ask the device itself. This is the only path when there is no interrupt
-    //  pin, and a safety net when there is one.
-    const uint32_t interval = this->interrupt_pin_ != nullptr ? SAFETY_POLL_INTERVAL_MS : POLL_INTERVAL_MS;
+    const uint32_t interval = POLL_INTERVAL_MS;
     const uint32_t now = millis();
     if (now - this->last_poll_ < interval)
       return;
