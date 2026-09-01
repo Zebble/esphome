@@ -8,7 +8,7 @@ static const char *const TAG = "tca8418";
 //  How often the device is asked whether it has events. This applies whether or
 //  not an interrupt pin is configured, so a pin stuck asserted cannot turn into
 //  I2C traffic on every pass of the main loop.
-static constexpr uint32_t POLL_INTERVAL_MS = 10;
+static constexpr uint32_t POLL_INTERVAL_MS = 3000;  // TEST BUILD ONLY
 
 void IRAM_ATTR TCA8418Component::interrupt_handler(TCA8418Component *arg) { arg->enable_loop_soon_any_context(); }
 
