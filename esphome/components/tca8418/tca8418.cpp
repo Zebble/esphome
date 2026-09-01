@@ -109,6 +109,14 @@ void TCA8418Component::loop() {
   }
   this->status_clear_warning();
 
+  //  TEST BUILD: report what the device says it has, and its raw flags.
+  uint8_t raw_status = 0;
+  this->read_byte(TCA8418_REG_INT_STAT, &raw_status);
+  if ((count & TCA8418_EVENT_COUNT_MASK) != 0 || raw_status != 0) {
+    ESP_LOGI(TAG, "queued=%u (KEY_LCK_EC=0x%02X)  INT_STAT=0x%02X%s", count & TCA8418_EVENT_COUNT_MASK, count,
+             raw_status, (raw_status & TCA8418_INT_STAT_OVERFLOW) != 0 ? "  <== OVERFLOW BIT SET" : "");
+  }
+
   if ((count & TCA8418_EVENT_COUNT_MASK) != 0)
     this->process_events_();
 
